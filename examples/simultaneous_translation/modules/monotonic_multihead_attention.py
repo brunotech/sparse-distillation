@@ -211,7 +211,7 @@ class MonotonicAttention(nn.Module):
 
         if encoder_padding_mask is not None:
             src_lengths = src_len - \
-                encoder_padding_mask.sum(dim=1, keepdim=True).long()
+                    encoder_padding_mask.sum(dim=1, keepdim=True).long()
         else:
             src_lengths = prev_monotonic_step.new_ones(bsz, 1) * src_len
 
@@ -221,10 +221,9 @@ class MonotonicAttention(nn.Module):
         new_monotonic_step = prev_monotonic_step
 
         step_offset = 0
-        if encoder_padding_mask is not None:
-            if encoder_padding_mask[:, 0].any():
-                # left_pad_source = True:
-                step_offset = encoder_padding_mask.sum(dim=-1, keepdim=True)
+        if encoder_padding_mask is not None and encoder_padding_mask[:, 0].any():
+            # left_pad_source = True:
+            step_offset = encoder_padding_mask.sum(dim=-1, keepdim=True)
 
         max_steps = src_lengths - 1 if self.mass_preservation else src_lengths
 
@@ -547,7 +546,7 @@ class MonotonicMultiheadAttentionHardAligned(
 
         if encoder_padding_mask is not None:
             src_lengths = src_len - \
-                encoder_padding_mask.sum(dim=1, keepdim=True).long()
+                    encoder_padding_mask.sum(dim=1, keepdim=True).long()
         else:
             src_lengths = torch.ones(bsz, 1).to(prev_monotonic_step) * src_len
 
@@ -557,10 +556,9 @@ class MonotonicMultiheadAttentionHardAligned(
         new_monotonic_step = prev_monotonic_step
 
         step_offset = torch.tensor(0)
-        if encoder_padding_mask is not None:
-            if encoder_padding_mask[:, 0].any():
-                # left_pad_source = True:
-                step_offset = encoder_padding_mask.sum(dim=-1, keepdim=True)
+        if encoder_padding_mask is not None and encoder_padding_mask[:, 0].any():
+            # left_pad_source = True:
+            step_offset = encoder_padding_mask.sum(dim=-1, keepdim=True)
 
         max_steps = src_lengths - 1 if self.mass_preservation else src_lengths
 
@@ -633,11 +631,10 @@ class MonotonicMultiheadAttentionHardAligned(
             incremental_state,
             'monotonic',
         )
-        if maybe_incremental_state is None:
-            typed_empty_dict: Dict[str, Optional[Tensor]] = {}
-            return typed_empty_dict
-        else:
+        if maybe_incremental_state is not None:
             return maybe_incremental_state
+        typed_empty_dict: Dict[str, Optional[Tensor]] = {}
+        return typed_empty_dict
 
     def _set_monotonic_buffer(self, incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]], buffer: Dict[str, Optional[Tensor]]):
         self.set_incremental_state(
@@ -820,7 +817,7 @@ class MonotonicMultiheadAttentionInfiniteLookback(
         soft_energy = self.attn_energy(q, k, key_padding_mask, attn_mask)
 
         assert list(soft_energy.size()) == \
-            [bsz, self.num_heads, tgt_len, src_len]
+                [bsz, self.num_heads, tgt_len, src_len]
 
         soft_energy = soft_energy.view(bsz * self.num_heads, tgt_len, src_len)
 
@@ -830,10 +827,9 @@ class MonotonicMultiheadAttentionInfiniteLookback(
             assert head_step is not None
             monotonic_length = head_step + 1
             step_offset = 0
-            if key_padding_mask is not None:
-                if key_padding_mask[:, 0].any():
-                    # left_pad_source = True:
-                    step_offset = key_padding_mask.sum(dim=-1, keepdim=True)
+            if key_padding_mask is not None and key_padding_mask[:, 0].any():
+                # left_pad_source = True:
+                step_offset = key_padding_mask.sum(dim=-1, keepdim=True)
             monotonic_length += step_offset
             mask = lengths_to_mask(
                 monotonic_length.view(-1),

@@ -54,7 +54,7 @@ def main():
     for line in sys.stdin:
         words = line.strip().split()
 
-        if not all(w in wrd_to_phn for w in words):
+        if any(w not in wrd_to_phn for w in words):
             continue
 
         phones = []

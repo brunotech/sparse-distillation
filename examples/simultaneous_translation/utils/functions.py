@@ -48,8 +48,7 @@ def safe_cumprod(tensor, dim: int, eps: float = 1e-10):
 
     log_tensor = torch.log(tensor + eps)
     cumsum_log_tensor = torch.cumsum(log_tensor, dim)
-    exp_cumsum_log_tensor = torch.exp(cumsum_log_tensor)
-    return exp_cumsum_log_tensor
+    return torch.exp(cumsum_log_tensor)
 
 
 def lengths_to_mask(lengths, max_len: int, dim: int = 0, negative_mask: bool = False):

@@ -62,7 +62,7 @@ def compute_wer(ref_uid_to_tra, hyp_uid_to_tra, g2p, g2p_dict):
                     logger.warning(f"{word} not in g2p_dict")
         elif g2p is not None:
             hyp = g2p(hyp_uid_to_tra[uid])
-            hyp = [p for p in hyp if p != "'" and p != " "]
+            hyp = [p for p in hyp if p not in ["'", " "]]
             hyp = [p[:-1] if p[-1].isnumeric() else p for p in hyp]
         else:
             hyp = hyp_uid_to_tra[uid].split()

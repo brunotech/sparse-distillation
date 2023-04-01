@@ -33,7 +33,7 @@ def main():
     for line in open(args.input_file):
         segment_scores.append(float(line.strip()))
         if len(segment_scores) == args.repeat_times:
-            stream.write("{}\n".format(aggregate_funcs[args.func](segment_scores)))
+            stream.write(f"{aggregate_funcs[args.func](segment_scores)}\n")
             segment_scores = []
 
 

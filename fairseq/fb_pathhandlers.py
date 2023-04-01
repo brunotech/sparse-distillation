@@ -94,9 +94,7 @@ class S3PathHandler(PathHandler):
                 See https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3.html for details.
         """
         self.cache_dir = cache_dir
-        self.transfer_config = TransferConfig(
-            **(transfer_config_kwargs if transfer_config_kwargs else {})
-        )
+        self.transfer_config = TransferConfig(**transfer_config_kwargs or {})
 
     def _get_supported_prefixes(self) -> List[str]:
         """
@@ -220,11 +218,11 @@ class S3PathHandler(PathHandler):
                     # Better fix: set last modified time via the remote object's last modified time,
                     # in download_file().
                     if (local_dt - remote_dt) > dt.timedelta(minutes=0):
-                        logger.info("URL {} was already cached in {}".format(path, local_path))
+                        logger.info(f"URL {path} was already cached in {local_path}")
                         return local_path
 
-            logger.info("Caching {} ...".format(path))
-            tmp = local_path + ".tmp"
+            logger.info(f"Caching {path} ...")
+            tmp = f"{local_path}.tmp"
             # clean-up tmp if found, because if tmp exists, it must be a dirty
             # result of a previously process that didn't cleanup itself.
             if os.path.isfile(tmp):
@@ -251,7 +249,7 @@ class S3PathHandler(PathHandler):
                 except Exception:
                     pass
 
-            logger.info("URL {} cached in {}".format(path, local_path))
+            logger.info(f"URL {path} cached in {local_path}")
             return local_path
 
     def _copy_from_local(
@@ -287,7 +285,7 @@ class S3PathHandler(PathHandler):
             )
             return True
         except botocore.exceptions.ClientError as e:
-            logger.error("Error in file upload - {}".format(str(e)))
+            logger.error(f"Error in file upload - {str(e)}")
             return False
 
     def _decorate_buf_with_s3_methods(
@@ -367,11 +365,7 @@ class S3PathHandler(PathHandler):
 
         elif 'w' in mode:
             # 1. For writing, we give the user io.BytesIO or io.StringIO.
-            if 'b' in mode:
-                buffer = io.BytesIO()
-            else:
-                buffer = io.StringIO()
-
+            buffer = io.BytesIO() if 'b' in mode else io.StringIO()
             # 2. Decorate buffer so that we upload when it's closed by user.
             #       If StringIO, decorator does a simple+expensive conversion
             #       to bytesIO before uploading.
@@ -400,7 +394,7 @@ class S3PathHandler(PathHandler):
         src_bucket, src_s3_path = self._parse_uri(src_path)
         dst_bucket, dst_s3_path = self._parse_uri(dst_path)
         assert src_bucket == dst_bucket, \
-            "For now, can only _copy() within a bucket."
+                "For now, can only _copy() within a bucket."
         client = self._get_client(src_bucket)
 
         try:
@@ -415,7 +409,7 @@ class S3PathHandler(PathHandler):
             )
             return True
         except botocore.exceptions.ClientError as e:
-            logger.error("Error in file copy - {}".format(str(e)))
+            logger.error(f"Error in file copy - {str(e)}")
             return False
 
     def _head_object(self, path: str) -> Optional[Dict]:
@@ -423,12 +417,7 @@ class S3PathHandler(PathHandler):
         client = self._get_client(bucket)
 
         try:
-            # Raises exception if not exists, else it exists.
-            response = client.head_object(
-                Bucket=bucket,
-                Key=s3_path
-            )
-            return response
+            return client.head_object(Bucket=bucket, Key=s3_path)
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Message'] == 'Bad Request':
                 raise OSError(

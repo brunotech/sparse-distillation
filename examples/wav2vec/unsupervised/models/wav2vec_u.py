@@ -144,15 +144,12 @@ class JoinSegmenter(Segmenter):
 
         if padding_mask.any():
             preds[padding_mask] = -1  # mark pad
-        uniques = []
-
         bsz, tsz, csz = logits.shape
 
-        for p in preds:
-            uniques.append(
-                p.cpu().unique_consecutive(return_inverse=True, return_counts=True)
-            )
-
+        uniques = [
+            p.cpu().unique_consecutive(return_inverse=True, return_counts=True)
+            for p in preds
+        ]
         new_tsz = max(u[0].numel() for u in uniques)
         new_logits = logits.new_zeros(bsz, new_tsz, csz)
         new_pad = padding_mask.new_zeros(bsz, new_tsz)
@@ -213,11 +210,7 @@ class Discriminator(nn.Module):
         dilation = cfg.discriminator_dilation
         self.max_pool = cfg.discriminator_max_pool
 
-        if cfg.discriminator_causal:
-            padding = kernel - 1
-        else:
-            padding = kernel // 2
-
+        padding = kernel - 1 if cfg.discriminator_causal else kernel // 2
         def make_conv(in_d, out_d, k, p=0, has_dilation=True):
             conv = nn.Conv1d(
                 in_d,
@@ -325,19 +318,17 @@ class Generator(nn.Module):
 
             dense_padding_mask = new_padding
 
-        result = {}
-
         token_x = None
         if tokens is not None:
             token_x = dense_x.new_zeros(tokens.numel(), self.output_dim)
             token_x.scatter_(1, tokens.view(-1, 1).long(), 1)
             token_x = token_x.view(tokens.shape + (self.output_dim,))
 
-        result["dense_x"] = dense_x
-        result["token_x"] = token_x
-        result["dense_padding_mask"] = dense_padding_mask
-
-        return result
+        return {
+            "dense_x": dense_x,
+            "token_x": token_x,
+            "dense_padding_mask": dense_padding_mask,
+        }
 
 
 @register_model("wav2vec_u", dataclass=Wav2vec_UConfig)
@@ -631,7 +622,7 @@ class Wav2vec_U(BaseFairseqModel):
         }
 
         suff = "_d" if d_step else "_g"
-        result["losses"]["dense" + suff] = loss_dense
-        result["losses"]["token" + suff] = loss_token
+        result["losses"][f"dense{suff}"] = loss_dense
+        result["losses"][f"token{suff}"] = loss_token
 
         return result

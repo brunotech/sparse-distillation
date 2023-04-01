@@ -57,12 +57,11 @@ def waitk(
         .long()
     )
 
-    if key_padding_mask is not None:
-        if key_padding_mask[:, 0].any():
-            # Left padding
-            activate_indices_offset += (
-                key_padding_mask.sum(dim=1, keepdim=True)
-            )
+    if key_padding_mask is not None and key_padding_mask[:, 0].any():
+        # Left padding
+        activate_indices_offset += (
+            key_padding_mask.sum(dim=1, keepdim=True)
+        )
 
     # Need to clamp the indices that are too large
     activate_indices_offset = (

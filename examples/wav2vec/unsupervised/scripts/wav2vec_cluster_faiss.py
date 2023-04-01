@@ -134,16 +134,13 @@ def main():
     print("Faiss Specs:", faiss_specs)
 
     feat_path = osp.join(args.save_dir, "features")
-    if osp.exists(feat_path + ".npy"):
-        feats = np.load(feat_path + ".npy")
+    if osp.exists(f"{feat_path}.npy"):
+        feats = np.load(f"{feat_path}.npy")
     else:
         generator, num = get_iterator(args)
         iterator = generator()
 
-        feats = []
-        for f in tqdm.tqdm(iterator, total=num):
-            feats.append(f)
-
+        feats = list(tqdm.tqdm(iterator, total=num))
         del iterator
         del generator
 
@@ -165,7 +162,7 @@ def main():
             print("Reloading...")
             del feats
             gc.collect()
-            feats = np.load(feat_path + ".npy")
+            feats = np.load(f"{feat_path}.npy")
 
         save_path = osp.join(args.save_dir, spec.spec_str)
         os.makedirs(save_path, exist_ok=True)

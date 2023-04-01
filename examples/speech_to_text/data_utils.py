@@ -145,7 +145,7 @@ def gen_config_yaml(
         "sm": writer.set_specaugment_sm_policy,
         "ss": writer.set_specaugment_ss_policy,
     }
-    specaugment_setter = specaugment_setters.get(specaugment_policy, None)
+    specaugment_setter = specaugment_setters.get(specaugment_policy)
     if specaugment_setter is not None:
         specaugment_setter()
     writer.set_bpe_tokenizer(
@@ -170,7 +170,7 @@ def gen_config_yaml(
         )
         writer.set_global_cmvn(str(gcmvn_path))
 
-    if len(audio_root) > 0:
+    if audio_root != "":
         writer.set_audio_root(audio_root)
     writer.flush()
 
@@ -212,7 +212,7 @@ def filter_manifest_df(
     if is_train_split:
         filters[f"long speech (>{max_n_frames} frames)"] = df["n_frames"] > max_n_frames
     if extra_filters is not None:
-        filters.update(extra_filters)
+        filters |= extra_filters
     invalid = reduce(lambda x, y: x | y, filters.values())
     valid = ~invalid
     print(

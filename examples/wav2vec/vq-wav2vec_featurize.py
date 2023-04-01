@@ -49,7 +49,7 @@ class FilesDataset:
         lbls = None
         if self.labels:
             if isinstance(self.labels, str):
-                lbl_file = osp.splitext(fname)[0] + "." + self.labels
+                lbl_file = f"{osp.splitext(fname)[0]}.{self.labels}"
                 with open(lbl_file, "r") as lblf:
                     lbls = lblf.readline()
                     assert lbls is not None
@@ -171,7 +171,7 @@ class DatasetWriter:
         return osp.join(self.output_dir, f"{name}.src{shard_part}")
 
     def var_file(self):
-        return osp.join(self.output_dir, f"vars.pt")
+        return osp.join(self.output_dir, "vars.pt")
 
     def load_config(self):
 
@@ -204,10 +204,9 @@ class DatasetWriter:
     def load_data(self, fnames):
 
         dataset = FilesDataset(fnames, self.args.labels)
-        loader = DataLoader(
+        return DataLoader(
             dataset, batch_size=32, collate_fn=dataset.collate, num_workers=8
         )
-        return loader
 
     def load_model(self):
         model, cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task([self.checkpoint])

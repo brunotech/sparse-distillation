@@ -41,17 +41,17 @@ def main():
 
     print(f"data path: {source_path}")
 
-    features = np.load(source_path + ".npy", mmap_mode="r")
+    features = np.load(f"{source_path}.npy", mmap_mode="r")
 
     os.makedirs(args.save_dir, exist_ok=True)
     save_path = osp.join(args.save_dir, args.split)
 
-    copyfile(source_path + ".tsv", save_path + ".tsv")
+    copyfile(f"{source_path}.tsv", f"{save_path}.tsv")
 
-    if os.path.exists(source_path + ".phn"):
-        copyfile(source_path + ".phn", save_path + ".phn")
-    if os.path.exists(source_path + ".wrd"):
-        copyfile(source_path + ".wrd", save_path + ".wrd")
+    if os.path.exists(f"{source_path}.phn"):
+        copyfile(f"{source_path}.phn", f"{save_path}.phn")
+    if os.path.exists(f"{source_path}.wrd"):
+        copyfile(f"{source_path}.wrd", f"{save_path}.wrd")
 
     if os.path.exists(osp.join(args.source, "dict.phn.txt")):
         copyfile(
@@ -59,17 +59,17 @@ def main():
             osp.join(args.save_dir, "dict.phn.txt"),
         )
 
-    if osp.exists(save_path + ".npy"):
-        os.remove(save_path + ".npy")
-    npaa = NpyAppendArray(save_path + ".npy")
+    if osp.exists(f"{save_path}.npy"):
+        os.remove(f"{save_path}.npy")
+    npaa = NpyAppendArray(f"{save_path}.npy")
 
-    with open(source_path + ".lengths", "r") as lf:
+    with open(f"{source_path}.lengths", "r") as lf:
         lengths = lf.readlines()
 
     fsz = features.shape[-1]
     start = 0
     with torch.no_grad():
-        with open(save_path + ".lengths", "w") as lengths_out:
+        with open(f"{save_path}.lengths", "w") as lengths_out:
             for length in tqdm.tqdm(lengths):
                 length = int(length)
                 end = start + length

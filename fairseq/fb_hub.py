@@ -41,7 +41,7 @@ def load(model, *args, **kwargs):
     sys.path.insert(0, repo_dir)
 
     hub_module = torch.hub.import_module(
-        MODULE_HUBCONF, repo_dir + "/" + MODULE_HUBCONF
+        MODULE_HUBCONF, f"{repo_dir}/{MODULE_HUBCONF}"
     )
 
     entry = torch.hub._load_entry_from_hubconf(hub_module, model)
@@ -83,16 +83,13 @@ def list(force_reload=False):
     sys.path.insert(0, repo_dir)
 
     hub_module = torch.hub.import_module(
-        MODULE_HUBCONF, repo_dir + "/" + MODULE_HUBCONF
+        MODULE_HUBCONF, f"{repo_dir}/{MODULE_HUBCONF}"
     )
 
     sys.path.remove(repo_dir)
 
-    # We take functions starts with '_' as internal helper functions
-    entrypoints = [
+    return [
         f
         for f in dir(hub_module)
         if callable(getattr(hub_module, f)) and not f.startswith("_")
     ]
-
-    return entrypoints

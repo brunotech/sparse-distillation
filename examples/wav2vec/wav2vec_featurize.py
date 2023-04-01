@@ -144,14 +144,12 @@ class EmbeddingDatasetWriter(object):
         self.extension = extension
         self.use_feat = use_feat
 
-        assert os.path.exists(self.input_path), "Input path '{}' does not exist".format(
+        assert os.path.exists(
             self.input_path
-        )
+        ), f"Input path '{self.input_path}' does not exist"
 
     def _progress(self, iterable, **kwargs):
-        if self.verbose:
-            return tqdm.tqdm(iterable, **kwargs)
-        return iterable
+        return tqdm.tqdm(iterable, **kwargs) if self.verbose else iterable
 
     def require_output_path(self, fname=None):
         path = self.get_output_path(fname)
@@ -188,7 +186,7 @@ class EmbeddingDatasetWriter(object):
 
     @property
     def input_fnames(self):
-        return sorted(glob.glob(self.get_input_path("*.{}".format(self.extension))))
+        return sorted(glob.glob(self.get_input_path(f"*.{self.extension}")))
 
     def __len__(self):
         return len(self.input_fnames)
@@ -199,7 +197,7 @@ class EmbeddingDatasetWriter(object):
 
         fnames_context = map(
             lambda x: os.path.join(
-                self.output_path, x.replace("." + self.extension, ".h5context")
+                self.output_path, x.replace(f".{self.extension}", ".h5context")
             ),
             map(os.path.basename, paths),
         )

@@ -101,12 +101,12 @@ def save_checkpoint(cfg: CheckpointConfig, trainer, epoch_itr, val_loss):
 
     extra_state = {"train_iterator": epoch_itr.state_dict(), "val_loss": val_loss}
     if hasattr(save_checkpoint, "best"):
-        extra_state.update({"best": save_checkpoint.best})
+        extra_state["best"] = save_checkpoint.best
 
     checkpoints = [
         os.path.join(cfg.save_dir, fn) for fn, cond in checkpoint_conds.items() if cond
     ]
-    if len(checkpoints) > 0:
+    if checkpoints:
         trainer.save_checkpoint(checkpoints[0], extra_state)
         for cp in checkpoints[1:]:
             if cfg.write_checkpoints_asynchronously:
@@ -187,9 +187,9 @@ def load_checkpoint(cfg: CheckpointConfig, trainer, **passthrough_args):
     reset_optimizer = cfg.reset_optimizer
     reset_lr_scheduler = cfg.reset_lr_scheduler
     optimizer_overrides = ast.literal_eval(cfg.optimizer_overrides)
-    reset_meters = cfg.reset_meters
     reset_dataloader = cfg.reset_dataloader
 
+    reset_meters = cfg.reset_meters
     if cfg.finetune_from_model is not None and (
         reset_optimizer or reset_lr_scheduler or reset_meters or reset_dataloader
     ):
@@ -202,36 +202,30 @@ def load_checkpoint(cfg: CheckpointConfig, trainer, **passthrough_args):
     if (
         cfg.restore_file == "checkpoint_last.pt"
     ):  # default value of restore_file is 'checkpoint_last.pt'
-        checkpoint_path = os.path.join(
-            cfg.save_dir, "checkpoint_last{}.pt".format(suffix)
-        )
+        checkpoint_path = os.path.join(cfg.save_dir, f"checkpoint_last{suffix}.pt")
         first_launch = not PathManager.exists(checkpoint_path)
         if cfg.finetune_from_model is not None and first_launch:
-            # if there is no last checkpoint to restore, start the finetune from pretrained model
-            # else just use usual logic to load checkpoint, e.g. restart from last checkpoint and etc.
-            if PathManager.exists(cfg.finetune_from_model):
-                checkpoint_path = cfg.finetune_from_model
-                reset_optimizer = True
-                reset_lr_scheduler = True
-                reset_meters = True
-                reset_dataloader = True
-                logger.info(
-                    f"loading pretrained model from {checkpoint_path}: "
-                    "optimizer, lr scheduler, meters, dataloader will be reset"
-                )
-            else:
+            if not PathManager.exists(cfg.finetune_from_model):
                 raise ValueError(
                     f"--funetune-from-model {cfg.finetune_from_model} does not exist"
                 )
+            checkpoint_path = cfg.finetune_from_model
+            reset_optimizer = True
+            reset_lr_scheduler = True
+            reset_meters = True
+            reset_dataloader = True
+            logger.info(
+                f"loading pretrained model from {checkpoint_path}: "
+                "optimizer, lr scheduler, meters, dataloader will be reset"
+            )
     elif suffix is not None:
-        checkpoint_path = cfg.restore_file.replace(".pt", suffix + ".pt")
+        checkpoint_path = cfg.restore_file.replace(".pt", f"{suffix}.pt")
     else:
         checkpoint_path = cfg.restore_file
 
     if cfg.restore_file != "checkpoint_last.pt" and cfg.finetune_from_model:
         raise ValueError(
-            "--finetune-from-model and --restore-file (non-default value) "
-            "can not be specified together: " + str(cfg)
+            f"--finetune-from-model and --restore-file (non-default value) can not be specified together: {str(cfg)}"
         )
 
     extra_state = trainer.load_checkpoint(
@@ -289,13 +283,8 @@ def load_checkpoint_to_cpu(path, arg_overrides=None, load_on_all_ranks=False):
     # checkpoint_last.pt) - so we remove the local copy, sync across processes
     # (if needed), and then download a fresh copy.
     if local_path != path and PathManager.path_requires_pathmanager(path):
-        try:
+        with contextlib.suppress(FileNotFoundError):
             os.remove(local_path)
-        except FileNotFoundError:
-            # With potentially multiple processes removing the same file, the
-            # file being missing is benign (missing_ok isn't available until
-            # Python 3.8).
-            pass
         if load_on_all_ranks:
             torch.distributed.barrier()
         local_path = PathManager.get_local_path(path)
@@ -365,9 +354,9 @@ def get_maybe_sharded_checkpoint_filename(
     filename: str, suffix: str, shard_idx: int, num_shards: int
 ) -> str:
     orig_filename = filename
-    filename = filename.replace(".pt", suffix + ".pt")
-    fsdp_filename = filename[:-3] + f"-shard{shard_idx}.pt"
-    model_parallel_filename = orig_filename[:-3] + f"_part{shard_idx}.pt"
+    filename = filename.replace(".pt", f"{suffix}.pt")
+    fsdp_filename = f"{filename[:-3]}-shard{shard_idx}.pt"
+    model_parallel_filename = f"{orig_filename[:-3]}_part{shard_idx}.pt"
     if PathManager.exists(fsdp_filename):
         return fsdp_filename
     elif num_shards > 1:
@@ -405,7 +394,7 @@ def load_model_ensemble_and_task(
             )
 
             if not PathManager.exists(filename):
-                raise IOError("Model file not found: {}".format(filename))
+                raise IOError(f"Model file not found: {filename}")
             if state is None:
                 state = load_checkpoint_to_cpu(filename, arg_overrides)
             if "args" in state and state["args"] is not None:
@@ -473,8 +462,8 @@ def checkpoint_paths(path, pattern=r"checkpoint(\d+)\.pt", keep_match=False):
     for i, f in enumerate(files):
         m = pt_regexp.fullmatch(f)
         if m is not None:
-            idx = float(m.group(1)) if len(m.groups()) > 0 else i
-            entries.append((idx, m.group(0)))
+            idx = float(m[1]) if len(m.groups()) > 0 else i
+            entries.append((idx, m[0]))
     if keep_match:
         return [(os.path.join(path, x[1]), x[0]) for x in sorted(entries, reverse=True)]
     else:
@@ -485,16 +474,15 @@ def torch_persistent_save(obj, filename, async_write: bool = False):
     if async_write:
         with PathManager.opena(filename, "wb") as f:
             _torch_persistent_save(obj, f)
-    else:
-        if PathManager.supports_rename(filename):
+    elif PathManager.supports_rename(filename):
             # do atomic save
-            with PathManager.open(filename + ".tmp", "wb") as f:
-                _torch_persistent_save(obj, f)
-            PathManager.rename(filename + ".tmp", filename)
-        else:
-            # fallback to non-atomic save
-            with PathManager.open(filename, "wb") as f:
-                _torch_persistent_save(obj, f)
+        with PathManager.open(f"{filename}.tmp", "wb") as f:
+            _torch_persistent_save(obj, f)
+        PathManager.rename(f"{filename}.tmp", filename)
+    else:
+        # fallback to non-atomic save
+        with PathManager.open(filename, "wb") as f:
+            _torch_persistent_save(obj, f)
 
 
 def _torch_persistent_save(obj, f):
@@ -719,7 +707,7 @@ def prune_state_dict(state_dict, model_cfg: Optional[DictConfig]):
             continue
 
         # otherwise, layer should be pruned.
-        original_layer_number = match.group(1)
+        original_layer_number = match[1]
         # figure out which mapping dict to replace from
         for pruning_pass in pruning_passes:
             if original_layer_number in pruning_pass["mapping_dict"] and pruning_pass[
@@ -761,7 +749,7 @@ def load_pretrained_component_from_model(
     `checkpoint` file.
     """
     if not PathManager.exists(checkpoint):
-        raise IOError("Model file not found: {}".format(checkpoint))
+        raise IOError(f"Model file not found: {checkpoint}")
     state = load_checkpoint_to_cpu(checkpoint)
     if isinstance(component, FairseqEncoder):
         component_type = "encoder"
@@ -790,9 +778,7 @@ def verify_checkpoint_directory(save_dir: str) -> None:
         with open(temp_file_path, "w"):
             pass
     except OSError as e:
-        logger.warning(
-            "Unable to access checkpoint save directory: {}".format(save_dir)
-        )
+        logger.warning(f"Unable to access checkpoint save directory: {save_dir}")
         raise e
     else:
         os.remove(temp_file_path)

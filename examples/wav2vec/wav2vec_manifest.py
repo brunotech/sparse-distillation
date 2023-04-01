@@ -51,7 +51,7 @@ def main(args):
         os.makedirs(args.dest)
 
     dir_path = os.path.realpath(args.root)
-    search_path = os.path.join(dir_path, "**/*." + args.ext)
+    search_path = os.path.join(dir_path, f"**/*.{args.ext}")
     rand = random.Random(args.seed)
 
     valid_f = (
@@ -74,9 +74,7 @@ def main(args):
 
             frames = soundfile.info(fname).frames
             dest = train_f if rand.random() > args.valid_percent else valid_f
-            print(
-                "{}\t{}".format(os.path.relpath(file_path, dir_path), frames), file=dest
-            )
+            print(f"{os.path.relpath(file_path, dir_path)}\t{frames}", file=dest)
     if valid_f is not None:
         valid_f.close()
 

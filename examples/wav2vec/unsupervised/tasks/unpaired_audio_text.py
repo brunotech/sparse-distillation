@@ -152,12 +152,9 @@ class UnpairedAudioText(FairseqTask):
         """
 
         dict_path = os.path.join(cfg.text_data, "dict.txt")
-        if os.path.exists(dict_path):
-            target_dictionary = Dictionary.load(dict_path)
-        else:
+        if not os.path.exists(dict_path):
             dict_path = os.path.join(cfg.data, f"dict.{cfg.labels}.txt")
-            target_dictionary = Dictionary.load(dict_path)
-
+        target_dictionary = Dictionary.load(dict_path)
         return cls(cfg, target_dictionary=target_dictionary)
 
     def optimizer_step(self, optimizer, model, update_num):
@@ -442,6 +439,4 @@ class UnpairedAudioText(FairseqTask):
                 )
 
     def build_model(self, cfg: FairseqDataclass):
-        model = super().build_model(cfg)
-
-        return model
+        return super().build_model(cfg)

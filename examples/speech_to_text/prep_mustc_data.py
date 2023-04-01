@@ -128,9 +128,12 @@ def process(args):
                     features
                 )
 
-                if split == 'train' and args.cmvn_type == "global":
-                    if len(gcmvn_feature_list) < args.gcmvn_max_num:
-                        gcmvn_feature_list.append(features)
+                if (
+                    split == 'train'
+                    and args.cmvn_type == "global"
+                    and len(gcmvn_feature_list) < args.gcmvn_max_num
+                ):
+                    gcmvn_feature_list.append(features)
 
             if split == 'train' and args.cmvn_type == "global":
                 # Estimate and save cmv

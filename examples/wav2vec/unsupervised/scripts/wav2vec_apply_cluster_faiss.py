@@ -35,11 +35,7 @@ def get_parser():
 
 def get_iterator(args):
     label_path = osp.join(args.data, f"{args.split}.{args.labels}")
-    if osp.exists(label_path):
-        lp = open(label_path, "r")
-    else:
-        lp = None
-
+    lp = open(label_path, "r") if osp.exists(label_path) else None
     with open(osp.join(args.data, f"{args.split}.tsv"), "r") as fp:
         lines = fp.read().split("\n")
         root = lines.pop(0).strip()
@@ -86,9 +82,9 @@ def main():
 
     res = faiss.StandardGpuResources()
     index_flat = (
-        faiss.IndexFlatL2(centroids.shape[1])
-        if not faiss_spec.sphere
-        else faiss.IndexFlatIP(centroids.shape[1])
+        faiss.IndexFlatIP(centroids.shape[1])
+        if faiss_spec.sphere
+        else faiss.IndexFlatL2(centroids.shape[1])
     )
     faiss_index = faiss.index_cpu_to_gpu(res, 0, index_flat)
     faiss_index.add(centroids)

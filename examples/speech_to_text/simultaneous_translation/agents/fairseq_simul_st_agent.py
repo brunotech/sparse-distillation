@@ -165,10 +165,7 @@ class FairseqSimulSTAgent(SpeechAgent):
         return states
 
     def to_device(self, tensor):
-        if self.gpu:
-            return tensor.cuda()
-        else:
-            return tensor.cpu()
+        return tensor.cuda() if self.gpu else tensor.cpu()
 
     @staticmethod
     def add_args(parser):
@@ -207,7 +204,7 @@ class FairseqSimulSTAgent(SpeechAgent):
 
         filename = args.model_path
         if not os.path.exists(filename):
-            raise IOError("Model file not found: {}".format(filename))
+            raise IOError(f"Model file not found: {filename}")
 
         state = checkpoint_utils.load_checkpoint_to_cpu(filename)
 
@@ -231,22 +228,18 @@ class FairseqSimulSTAgent(SpeechAgent):
             self.model.cuda()
 
         # Set dictionary
-        self.dict = {}
-        self.dict["tgt"] = task.target_dictionary
+        self.dict = {"tgt": task.target_dictionary}
 
     def initialize_states(self, states):
         self.feature_extractor.clear_cache()
         states.units.source = TensorListEntry()
         states.units.target = ListEntry()
-        states.incremental_states = dict()
+        states.incremental_states = {}
 
     def segment_to_units(self, segment, states):
         # Convert speech samples to features
         features = self.feature_extractor(segment)
-        if features is not None:
-            return [features]
-        else:
-            return []
+        return [features] if features is not None else []
 
     def units_to_segment(self, units, states):
         # Merge sub word to full word.
@@ -265,7 +258,7 @@ class FairseqSimulSTAgent(SpeechAgent):
                 if len(segment) == 0:
                     segment += [token.replace(BOW_PREFIX, "")]
                 else:
-                    for j in range(len(segment)):
+                    for _ in range(len(segment)):
                         units.pop()
 
                     string_to_return = ["".join(segment)]
@@ -334,10 +327,7 @@ class FairseqSimulSTAgent(SpeechAgent):
 
         torch.cuda.empty_cache()
 
-        if outputs.action == 0:
-            return READ_ACTION
-        else:
-            return WRITE_ACTION
+        return READ_ACTION if outputs.action == 0 else WRITE_ACTION
 
     def predict(self, states):
         decoder_states = states.decoder_out

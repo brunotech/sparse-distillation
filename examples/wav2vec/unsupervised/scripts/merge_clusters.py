@@ -36,14 +36,14 @@ def main():
     args = parser.parse_args()
 
     source_path = osp.join(args.source, args.split)
-    cluster_path = osp.join(args.cluster_dir, args.split + ".src")
+    cluster_path = osp.join(args.cluster_dir, f"{args.split}.src")
     print(f"data path: {source_path}")
 
-    features = np.load(source_path + ".npy", mmap_mode="r")
+    features = np.load(f"{source_path}.npy", mmap_mode="r")
     sizes = []
     offsets = []
     offset = 0
-    with open(source_path + ".lengths", "r") as len_f:
+    with open(f"{source_path}.lengths", "r") as len_f:
         for line in len_f:
             length = int(line.rstrip())
             sizes.append(length)
@@ -61,21 +61,21 @@ def main():
     os.makedirs(args.save_dir, exist_ok=True)
     save_path = osp.join(args.save_dir, args.split)
 
-    copyfile(source_path + ".tsv", save_path + ".tsv")
+    copyfile(f"{source_path}.tsv", f"{save_path}.tsv")
 
-    if os.path.exists(source_path + ".phn"):
-        copyfile(source_path + ".phn", save_path + ".phn")
+    if os.path.exists(f"{source_path}.phn"):
+        copyfile(f"{source_path}.phn", f"{save_path}.phn")
     if os.path.exists(osp.join(args.source, "dict.phn.txt")):
         copyfile(
             osp.join(args.source, "dict.phn.txt"),
             osp.join(args.save_dir, "dict.phn.txt"),
         )
-    if os.path.exists(source_path + ".wrd"):
-        copyfile(source_path + ".wrd", save_path + ".wrd")
+    if os.path.exists(f"{source_path}.wrd"):
+        copyfile(f"{source_path}.wrd", f"{save_path}.wrd")
 
-    if osp.exists(save_path + ".npy"):
-        os.remove(save_path + ".npy")
-    npaa = NpyAppendArray(save_path + ".npy")
+    if osp.exists(f"{save_path}.npy"):
+        os.remove(f"{save_path}.npy")
+    npaa = NpyAppendArray(f"{save_path}.npy")
 
     def merge(feats, clust):
         feats = torch.from_numpy(feats.copy())
@@ -99,7 +99,7 @@ def main():
 
         return torch.stack(merged, dim=0).numpy()
 
-    with open(save_path + ".lengths", "w") as l_f:
+    with open(f"{save_path}.lengths", "w") as l_f:
         for size, offset, clust in tqdm.tqdm(
             zip(sizes, offsets, clusters), total=len(sizes)
         ):

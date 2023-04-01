@@ -11,6 +11,7 @@ vads=shards/train.vads
 python remove_silence.py --paths $paths --vads $vads
 """
 
+
 import os
 import argparse
 import torch
@@ -28,9 +29,7 @@ params = parser.parse_args()
 paths = []
 with open(params.tsv) as f:
     root = next(f).rstrip()
-    for line in f:
-        paths.append(os.path.join(root, line.rstrip().split("\t")[0]))
-
+    paths.extend(os.path.join(root, line.rstrip().split("\t")[0]) for line in f)
 # load vads
 list_intervals = []
 with open(params.vads) as f:
@@ -53,7 +52,7 @@ for i in tqdm.trange(len(paths)):
 
     # YOU MAY NEED TO MODIFY THIS TO GET THE RIGHT SUBPATH
     # outpath = params.out + '/'.join(paths[i].split('/')[-1])
-    outpath = params.out + "/" + "/".join(paths[i].split("/")[-2:])
+    outpath = f"{params.out}/" + "/".join(paths[i].split("/")[-2:])
 
     if not os.path.isdir("/".join(outpath.split("/")[:-1])):
         os.makedirs("/".join(outpath.split("/")[:-1]))

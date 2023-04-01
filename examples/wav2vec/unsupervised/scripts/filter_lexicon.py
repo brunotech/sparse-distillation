@@ -27,11 +27,7 @@ def main():
 
     for line in sys.stdin:
         items = line.rstrip().split()
-        skip = len(items) < 2
-        for x in items[1:]:
-            if x not in symbols:
-                skip = True
-                break
+        skip = next((True for x in items[1:] if x not in symbols), len(items) < 2)
         if not skip:
             print(line, end="")
 

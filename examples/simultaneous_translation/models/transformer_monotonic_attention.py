@@ -88,7 +88,10 @@ class TransformerMonotonicEncoder(TransformerEncoder):
         self.dictionary = dictionary
         self.layers = nn.ModuleList([])
         self.layers.extend(
-            [TransformerMonotonicEncoderLayer(args) for i in range(args.encoder_layers)]
+            [
+                TransformerMonotonicEncoderLayer(args)
+                for _ in range(args.encoder_layers)
+            ]
         )
 
 

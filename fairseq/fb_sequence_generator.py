@@ -52,10 +52,7 @@ class FBEnsembleModelWithFork(EnsembleModel):
         for i, model in enumerate(self.models):
             decoder_out = torch.jit._wait(futures[i])
             attn: Optional[Tensor] = None
-            # Future type doesn't support len().
-            decoder_len = 0
-            for _ in decoder_out:
-                decoder_len += 1
+            decoder_len = sum(1 for _ in decoder_out)
             if decoder_len > 1 and decoder_out[1] is not None:
                 if isinstance(decoder_out[1], Tensor):
                     attn = decoder_out[1]
@@ -82,10 +79,7 @@ class FBEnsembleModelWithFork(EnsembleModel):
 
             log_probs.append(probs)
             if attn is not None:
-                if avg_attn is None:
-                    avg_attn = attn
-                else:
-                    avg_attn = avg_attn + attn
+                avg_attn = attn if avg_attn is None else avg_attn + attn
         avg_probs = torch.logsumexp(torch.stack(log_probs, dim=0), dim=0) - math.log(
             self.models_size
         )

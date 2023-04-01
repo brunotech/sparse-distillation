@@ -67,7 +67,7 @@ class Wav2VecFeatureReader(object):
 
 
 def get_iterator(args):
-    with open(osp.join(args.data, args.split) + ".tsv", "r") as fp:
+    with open(f"{osp.join(args.data, args.split)}.tsv", "r") as fp:
         lines = fp.read().split("\n")
         root = lines.pop(0).strip()
         files = [osp.join(root, line.split("\t")[0]) for line in lines if len(line) > 0]
@@ -77,8 +77,7 @@ def get_iterator(args):
 
         def iterate():
             for fname in files:
-                w2v_feats = reader.get_feats(fname)
-                yield w2v_feats
+                yield reader.get_feats(fname)
 
     return iterate, num
 
@@ -90,15 +89,15 @@ def main():
     os.makedirs(args.save_dir, exist_ok=True)
 
     def create_files(dest):
-        copyfile(osp.join(args.data, args.split) + ".tsv", dest + ".tsv")
-        if osp.exists(osp.join(args.data, args.split) + ".wrd"):
-            copyfile(osp.join(args.data, args.split) + ".wrd", dest + ".wrd")
-        if osp.exists(osp.join(args.data, args.split) + ".phn"):
-            copyfile(osp.join(args.data, args.split) + ".phn", dest + ".phn")
+        copyfile(f"{osp.join(args.data, args.split)}.tsv", f"{dest}.tsv")
+        if osp.exists(f"{osp.join(args.data, args.split)}.wrd"):
+            copyfile(f"{osp.join(args.data, args.split)}.wrd", f"{dest}.wrd")
+        if osp.exists(f"{osp.join(args.data, args.split)}.phn"):
+            copyfile(f"{osp.join(args.data, args.split)}.phn", f"{dest}.phn")
 
-        if osp.exists(dest + ".npy"):
-            os.remove(dest + ".npy")
-        npaa = NpyAppendArray(dest + ".npy")
+        if osp.exists(f"{dest}.npy"):
+            os.remove(f"{dest}.npy")
+        npaa = NpyAppendArray(f"{dest}.npy")
         return npaa
 
     save_path = osp.join(args.save_dir, args.split)
@@ -107,7 +106,7 @@ def main():
     generator, num = get_iterator(args)
     iterator = generator()
 
-    with open(save_path + ".lengths", "w") as l_f:
+    with open(f"{save_path}.lengths", "w") as l_f:
         for w2v_feats in tqdm.tqdm(iterator, total=num):
             print(len(w2v_feats), file=l_f)
 

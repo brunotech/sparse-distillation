@@ -265,12 +265,7 @@ class InferenceProcessor:
         sid: int,
         batch_id: int,
     ) -> Tuple[int, int]:
-        speaker = None  # Speaker can't be parsed from dataset.
-
-        if "target_label" in sample:
-            toks = sample["target_label"]
-        else:
-            toks = sample["target"]
+        toks = sample.get("target_label", sample["target"])
         toks = toks[batch_id, :]
 
         # Processes hypothesis.
@@ -286,6 +281,8 @@ class InferenceProcessor:
         tgt_words = post_process(tgt_pieces, self.cfg.common_eval.post_process)
 
         if self.cfg.decoding.results_path is not None:
+            speaker = None  # Speaker can't be parsed from dataset.
+
             print(f"{hyp_pieces} ({speaker}-{sid})", file=self.hypo_units_file)
             print(f"{hyp_words} ({speaker}-{sid})", file=self.hypo_words_file)
             print(f"{tgt_pieces} ({speaker}-{sid})", file=self.ref_units_file)
@@ -439,10 +436,7 @@ def hydra_main(cfg: InferConfig) -> Union[float, Tuple[float, Optional[float]]]:
             logger.error("Crashed! %s", str(e))
 
     logger.info("Word error rate: %.4f", wer)
-    if cfg.is_ax:
-        return wer, None
-
-    return wer
+    return (wer, None) if cfg.is_ax else wer
 
 
 def cli_main() -> None:

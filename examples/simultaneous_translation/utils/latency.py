@@ -135,9 +135,7 @@ class AverageLagging(LatencyMetric):
         )
         lagging.masked_fill_(lagging_padding_mask, 0)
         tau = (1 - lagging_padding_mask.type_as(lagging)).sum(dim=0, keepdim=True)
-        AL = lagging.sum(dim=0, keepdim=True) / tau
-
-        return AL
+        return lagging.sum(dim=0, keepdim=True) / tau
 
 
 class DifferentiableAverageLagging(LatencyMetric):
@@ -278,17 +276,16 @@ class LatencyInference(object):
         delays = delays.masked_fill(delays >= src_lens, 0) + (src_lens - 1).expand_as(
             delays
         ).masked_fill(delays < src_lens, 0)
-        return_dict = {}
-        for key, func in self.metric_calculator.items():
-            return_dict[key] = func(
+        return {
+            key: func(
                 delays.float(),
                 src_lens.float(),
                 target_padding_mask=None,
                 batch_first=True,
                 start_from_zero=True,
             ).t()
-
-        return return_dict
+            for key, func in self.metric_calculator.items()
+        }
 
 
 class LatencyTraining(object):
@@ -326,14 +323,12 @@ class LatencyTraining(object):
             bsz, num_heads, tgt_len, src_len = attention[0].size()
             attention = torch.cat(attention, dim=1)
             bsz, num_heads_x_layers, tgt_len, src_len = attention.size()
-            # bsz * num_heads * num_layers, tgt_len, src_len
-            attention = attention.view(-1, tgt_len, src_len)
         else:
             # bsz * num_heads * num_layers, tgt_len, src_len
             bsz, tgt_len, src_len = attention.size()
             num_heads_x_layers = 1
-            attention = attention.view(-1, tgt_len, src_len)
-
+        # bsz * num_heads * num_layers, tgt_len, src_len
+        attention = attention.view(-1, tgt_len, src_len)
         if not self.stay_on_last_token:
             residual_attention = 1 - attention[:, :, :-1].sum(dim=2, keepdim=True)
             attention = torch.cat([attention[:, :, :-1], residual_attention], dim=2)

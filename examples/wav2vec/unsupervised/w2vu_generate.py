@@ -217,9 +217,9 @@ def process_predictions(
                 to_write[res_files["ref.words"]] = tgt_words
 
         if not cfg.fairseq.common_eval.quiet:
-            logger.info(f"HYPO {i}:" + hyp_words)
+            logger.info(f"HYPO {i}:{hyp_words}")
             if tgt_words:
-                logger.info("TARGET:" + tgt_words)
+                logger.info(f"TARGET:{tgt_words}")
 
             if "am_score" in hypo and "lm_score" in hypo:
                 logger.info(
@@ -276,16 +276,17 @@ def prepare_result_files(cfg: UnsupGenerateConfig):
         )
         return open(path, "w", buffering=1)
 
-    if not cfg.results_path:
-        return None
-
-    return {
-        "hypo.words": get_res_file(""),
-        "hypo.units": get_res_file("_units"),
-        "ref.words": get_res_file("_ref"),
-        "ref.units": get_res_file("_ref_units"),
-        "hypo.nbest.words": get_res_file("_nbest_words"),
-    }
+    return (
+        {
+            "hypo.words": get_res_file(""),
+            "hypo.units": get_res_file("_units"),
+            "ref.words": get_res_file("_ref"),
+            "ref.units": get_res_file("_ref_units"),
+            "hypo.nbest.words": get_res_file("_nbest_words"),
+        }
+        if cfg.results_path
+        else None
+    )
 
 
 def optimize_models(cfg: UnsupGenerateConfig, use_cuda, models):
@@ -394,7 +395,8 @@ def generate(cfg: UnsupGenerateConfig, models, saved_cfg, use_cuda):
     targets = None
     if cfg.targets is not None:
         tgt_path = os.path.join(
-            cfg.fairseq.task.data, cfg.fairseq.dataset.gen_subset + "." + cfg.targets
+            cfg.fairseq.task.data,
+            f"{cfg.fairseq.dataset.gen_subset}.{cfg.targets}",
         )
         if os.path.exists(tgt_path):
             with open(tgt_path, "r") as f:
@@ -593,7 +595,7 @@ def main(cfg: UnsupGenerateConfig, model=None):
 
     if model is None:
         # Load ensemble
-        logger.info("| loading model(s) from {}".format(cfg.fairseq.common_eval.path))
+        logger.info(f"| loading model(s) from {cfg.fairseq.common_eval.path}")
         models, saved_cfg = checkpoint_utils.load_model_ensemble(
             cfg.fairseq.common_eval.path.split("\\"),
             arg_overrides=overrides,
@@ -645,11 +647,11 @@ def main(cfg: UnsupGenerateConfig, model=None):
 
     lm_ppl = max(cfg.min_lm_ppl, lm_ppl)
 
-    if not cfg.unsupervised_tuning == 0:
-        weighted_score = wer
-    else:
-        weighted_score = math.log(lm_ppl) * (vt_diff or 1.0)
-
+    weighted_score = (
+        math.log(lm_ppl) * (vt_diff or 1.0)
+        if cfg.unsupervised_tuning == 0
+        else wer
+    )
     res = (
         f"| Generate {cfg.fairseq.dataset.gen_subset} with beam={cfg.beam}, "
         f"lm_weight={cfg.kaldi_decoder_config.acoustic_scale if cfg.kaldi_decoder_config else cfg.lm_weight}, "
@@ -684,9 +686,7 @@ def hydra_main(cfg):
 
     _, score = main(cfg)
 
-    if cfg.is_ax:
-        return score, None
-    return score
+    return (score, None) if cfg.is_ax else score
 
 
 def cli_main():

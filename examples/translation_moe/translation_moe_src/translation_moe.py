@@ -76,15 +76,7 @@ class TranslationMoETask(TranslationTask):
     cfg: TranslationMoEConfig
 
     def __init__(self, cfg: TranslationMoEConfig, src_dict, tgt_dict):
-        if cfg.method == "sMoElp":
-            # soft MoE with learned prior
-            self.uniform_prior = False
-            self.hard_selection = False
-        elif cfg.method == "sMoEup":
-            # soft MoE with uniform prior
-            self.uniform_prior = True
-            self.hard_selection = False
-        elif cfg.method == "hMoElp":
+        if cfg.method == "hMoElp":
             # hard MoE with learned prior
             self.uniform_prior = False
             self.hard_selection = True
@@ -93,11 +85,19 @@ class TranslationMoETask(TranslationTask):
             self.uniform_prior = True
             self.hard_selection = True
 
+        elif cfg.method == "sMoElp":
+            # soft MoE with learned prior
+            self.uniform_prior = False
+            self.hard_selection = False
+        elif cfg.method == "sMoEup":
+            # soft MoE with uniform prior
+            self.uniform_prior = True
+            self.hard_selection = False
         # add indicator tokens for each expert
         for i in range(cfg.num_experts):
             # add to both dictionaries in case we're sharing embeddings
-            src_dict.add_symbol("<expert_{}>".format(i))
-            tgt_dict.add_symbol("<expert_{}>".format(i))
+            src_dict.add_symbol(f"<expert_{i}>")
+            tgt_dict.add_symbol(f"<expert_{i}>")
 
         super().__init__(cfg, src_dict, tgt_dict)
 
@@ -106,34 +106,33 @@ class TranslationMoETask(TranslationTask):
 
         model = models.build_model(cfg, self)
         if not self.uniform_prior and not hasattr(model, "gating_network"):
-            if self.cfg.mean_pool_gating_network:
-                if self.cfg.mean_pool_gating_network_encoder_dim > 0:
-                    encoder_dim = self.cfg.mean_pool_gating_network_encoder_dim
-                elif getattr(cfg, "encoder_embed_dim", None):
-                    # assume that encoder_embed_dim is the encoder's output dimension
-                    encoder_dim = cfg.encoder_embed_dim
-                else:
-                    raise ValueError(
-                        "Must specify --mean-pool-gating-network-encoder-dim"
-                    )
-
-                if self.cfg.mean_pool_gating_network_dropout > 0:
-                    dropout = self.cfg.mean_pool_gating_network_dropout
-                elif getattr(cfg, "dropout", None):
-                    dropout = cfg.dropout
-                else:
-                    raise ValueError("Must specify task.mean_pool_gating_network_dropout")
-
-                model.gating_network = MeanPoolGatingNetwork(
-                    encoder_dim,
-                    self.cfg.num_experts,
-                    dropout,
-                )
-            else:
+            if not self.cfg.mean_pool_gating_network:
                 raise ValueError(
                     "translation_moe task with learned prior requires the model to "
                     "have a gating network; try using --mean-pool-gating-network"
                 )
+            if self.cfg.mean_pool_gating_network_encoder_dim > 0:
+                encoder_dim = self.cfg.mean_pool_gating_network_encoder_dim
+            elif getattr(cfg, "encoder_embed_dim", None):
+                # assume that encoder_embed_dim is the encoder's output dimension
+                encoder_dim = cfg.encoder_embed_dim
+            else:
+                raise ValueError(
+                    "Must specify --mean-pool-gating-network-encoder-dim"
+                )
+
+            if self.cfg.mean_pool_gating_network_dropout > 0:
+                dropout = self.cfg.mean_pool_gating_network_dropout
+            elif getattr(cfg, "dropout", None):
+                dropout = cfg.dropout
+            else:
+                raise ValueError("Must specify task.mean_pool_gating_network_dropout")
+
+            model.gating_network = MeanPoolGatingNetwork(
+                encoder_dim,
+                self.cfg.num_experts,
+                dropout,
+            )
         return model
 
     def expert_index(self, i):

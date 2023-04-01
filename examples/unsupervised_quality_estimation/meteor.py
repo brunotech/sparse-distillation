@@ -101,7 +101,7 @@ def main():
     sys.stderr.write("\nWriting results...")
     with open(args.output, "w") as o:
         for scr in scores:
-            o.write("{}\n".format(scr))
+            o.write(f"{scr}\n")
     o.close()
 
 
